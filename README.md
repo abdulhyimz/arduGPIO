@@ -39,3 +39,7 @@ A Python library to control Arduino using JSON-based serial communication. This 
      ```
 
 ---
+
+## Arduino Code
+
+Upload the arduino.ino file to your Arduino and it's ready to use
