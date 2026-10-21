@@ -1,45 +1,118 @@
 # arduGPIO
 
-![Arduino and Python](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoKnoHZFuIwEy9_rQHoYH-JxEHAvdN1AFuPw&s)
-
-A Python library to control Arduino using JSON-based serial communication. This library supports digital and analog operations, including PWM, making it perfect for IoT projects, robotics, and automation.
-
----
+Python + Arduino JSON serial bridge for simple GPIO-style control.
 
 ## Features
 
-- **Set pin modes**: Configure pins as `INPUT` or `OUTPUT`.
-- **Digital read/write**: Read from or write to digital pins.
-- **Analog read**: Read analog values from analog pins.
-- **PWM (analog write)**: Control PWM pins with values between 0 and 255.
-
----
+- Pin mode setup (`INPUT`, `OUTPUT`)
+- Digital write/read (`HIGH`, `LOW`, `0/1`)
+- Analog read
+- PWM write (`0..255`)
+- Line-based JSON protocol between Python and Arduino
 
 ## Requirements
 
-- **Arduino IDE**: Upload the provided Arduino sketch to your board.
-- **Python 3.x**: Ensure Python is installed on your system.
-- **Libraries**:
-  - `pyserial`: Install via `pip install pyserial`.
-  - `ArduinoJson` (for Arduino): Install via Arduino Library Manager.
+- Python 3.8+
+- Arduino IDE
+- ArduinoJson library on the board side
+- A board flashed with `arduino.ino`
 
----
+## Install
 
-## Installation
+### From source
 
-1. **Arduino Setup**:
-   - Upload the `arduino.ino` sketch to your Arduino.
-   - Ensure the baud rate is set to **9600**.
+```bash
+git clone https://github.com/abdulhyimz/arduGPIO.git
+cd arduGPIO
+python -m pip install -e .
+```
 
-2. **Python Setup**:
-   - Clone this repository or download the `arduGPIO.py` file.
-   - Install the required Python library:
-     ```bash
-     pip install pyserial
-     ```
+### Runtime dependency
 
----
+`pyserial` is installed automatically from package metadata.
 
-## Arduino Code
+## Arduino setup
 
-Upload the arduino.ino file to your Arduino and it's ready to use
+1. Open `arduino.ino` in Arduino IDE.
+2. Install **ArduinoJson** from Library Manager.
+3. Select your board/port and upload.
+4. Keep baud rate at `9600` (default firmware/client setting).
+
+## Serial port examples
+
+- **Windows:** `COM3`
+- **Linux:** `/dev/ttyUSB0` or `/dev/ttyACM0`
+- **macOS:** `/dev/tty.usbmodem*` or `/dev/tty.usbserial*`
+
+## Python API
+
+```python
+from arduGPIO import arduGPIO
+
+with arduGPIO(port="COM3", baudrate=9600, timeout=1.0, write_timeout=1.0) as gpio:
+    gpio.setup(9, "OUTPUT")
+    gpio.output(9, "HIGH")
+    gpio.output(9, "LOW")
+
+    gpio.setup(5, "INPUT")
+    state = gpio.input(5)
+
+    value = gpio.analogRead(0)
+    gpio.analogWrite(9, 128)
+```
+
+### Notes about compatibility
+
+- Existing class/method names are preserved: `arduGPIO`, `setup`, `output`, `input`, `analogRead`, `analogWrite`, `close`.
+- Added improvements:
+  - Context manager support (`with ... as ...`)
+  - Input validation
+  - Explicit read/write timeouts
+  - Clear connection/protocol exceptions
+
+## Protocol
+
+Each command is one JSON object per line (`\n` terminated).
+
+Supported actions:
+
+- `SETUP`: `{"action":"SETUP","pin":9,"mode":"OUTPUT"}`
+- `WRITE`: `{"action":"WRITE","pin":9,"value":"HIGH"}`
+- `READ`: `{"action":"READ","pin":5}`
+- `ANALOG_READ`: `{"action":"ANALOG_READ","pin":0}`
+- `ANALOG_WRITE`: `{"action":"ANALOG_WRITE","pin":9,"value":128}`
+
+Responses:
+
+- Success: `{"status":"OK"}` or `{"status":"OK","value":123}`
+- Error: `{"status":"ERROR","message":"..."}`
+
+The firmware uses a bounded serial timeout and fixed input buffer for safer parsing.
+
+## Limitations and PWM notes
+
+- PWM support depends on board/pin capabilities.
+- Pin numbering and analog pin behavior are board-specific.
+- This project does not auto-detect board pin capabilities.
+
+## Development and testing
+
+Run tests (no hardware required):
+
+```bash
+python -m pip install -e . pytest
+pytest
+```
+
+Build package locally:
+
+```bash
+python -m pip install --upgrade build
+python -m build
+```
+
+Hardware integration checks must be run manually with a connected Arduino.
+
+## License
+
+MIT (see `LICENSE`).
